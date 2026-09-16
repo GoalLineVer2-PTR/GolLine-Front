@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAR — Goal-Line Technology</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+    <!-- Contenedor único: ocupa el 100% del viewport y centra el texto -->
+    <main class="pantalla pantalla--idle" id="pantalla">
+
+        <h1 class="pantalla__texto" id="texto">ESPERANDO JUGADA...</h1>
+
+        <!-- Botones de simulación. Discretos, en la parte inferior. -->
+        <nav class="mocks">
+            <button class="mocks__btn" onclick="actualizarPantalla('gol')">Gol</button>
+            <button class="mocks__btn" onclick="actualizarPantalla('nogol')">No Gol</button>
+            <button class="mocks__btn" onclick="actualizarPantalla('idle')">Reposo</button>
+        </nav>
+
+    </main>
+
+    <script src="../js/app.js"></script>
+</body>
+</html>
