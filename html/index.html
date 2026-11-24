@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAR — Goal-Line Technology</title>
+    <title>VAR — Goal-Line Technology | Cartel Estadio</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
-    <!-- Contenedor único: ocupa el 100% del viewport y centra el texto -->
     <main class="pantalla pantalla--idle" id="pantalla">
+        <div class="pantalla__badge" id="syncBadge">CONECTANDO...</div>
 
-        <h1 class="pantalla__texto" id="texto">ESPERANDO JUGADA...</h1>
+        <div class="pantalla__contenido">
+            <h1 class="pantalla__texto" id="texto">ESPERANDO JUGADA...</h1>
+            <p class="pantalla__sub" id="subtexto">FIFA GOAL-LINE TECHNOLOGY • 240Hz</p>
+        </div>
 
         <!-- Botones de simulación. Discretos, en la parte inferior. -->
         <nav class="mocks">
@@ -24,9 +27,10 @@
             <button class="mocks__btn" onclick="actualizarPantalla('nogol')">No Gol</button>
             <button class="mocks__btn" onclick="actualizarPantalla('idle')">Reposo</button>
         </nav>
-
     </main>
 
+    <script src="../js/config.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous"></script>
     <script src="../js/app.js"></script>
 </body>
 </html>

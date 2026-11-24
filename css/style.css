@@ -71,6 +71,13 @@ body {
 /* ============================================================
    TEXTO PRINCIPAL — el único elemento que importa
    ============================================================ */
+.pantalla__contenido {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
 .pantalla__texto {
     font-size: 8rem;             /* GIGANTE */
     font-weight: 900;            /* bold extremo */
@@ -82,11 +89,45 @@ body {
     transition: color 0.5s ease;
 }
 
+.pantalla__sub {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 0 4vw;
+    color: rgba(255, 255, 255, 0.72);
+    user-select: none;
+    transition: color 0.4s ease;
+}
+
+.pantalla--idle .pantalla__sub {
+    color: rgba(176, 176, 176, 0.55);
+}
+
+.pantalla__badge {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.72);
+    user-select: none;
+}
+
 /* En pantallas pequeñas el texto se adapta de forma sutil
    sin perder su carácter masivo. */
 @media (max-width: 720px) {
     .pantalla__texto {
         font-size: 4rem;
+    }
+    .pantalla__sub {
+        font-size: 0.9rem;
     }
 }
 
