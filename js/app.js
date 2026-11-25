@@ -1,9 +1,9 @@
 /* ============================================================
    VAR — GOAL-LINE TECHNOLOGY (Cartel Gigante del Estadio)
    app.js
-   Sincronización instantánea vía SignalR (/goalHub) con fallback
-   automático a polling REST (/api/EstadoVAR).
-   URL configurable para Local, Docker Compose y Azure Static Web Apps.
+   Sincronización instantánea (<10ms) vía WebSocket nativo (/ws/var-state),
+   sin bloqueos CORS desde file:// ni throttling de setInterval en segundo plano,
+   con fallback automático a REST (/api/EstadoVAR).
    ============================================================ */
 
 'use strict';
@@ -27,15 +27,23 @@ function resolverApiBase() {
     const fromConfig = (window.GOALLINE_API_URL || '').trim();
     if (fromConfig) return fromConfig.replace(/\/+$/, '');
 
-    return 'http://localhost:8080';
+    return 'http://127.0.0.1:8080';
+}
+
+function construirWsUrl(httpBase, path) {
+    if (httpBase.startsWith('https://')) return `wss://${httpBase.slice(8)}${path}`;
+    if (httpBase.startsWith('http://'))  return `ws://${httpBase.slice(7)}${path}`;
+    return `ws://${httpBase}${path}`;
 }
 
 const API_BASE = resolverApiBase();
 const ENDPOINT_VAR = `${API_BASE}/api/EstadoVAR`;
-const HUB_URL = `${API_BASE}/goalHub`;
+const WS_VAR_URL = construirWsUrl(API_BASE, '/ws/var-state');
 
 let estadoActualServidor = 'idle';
-let signalrConectado = false;
+let ultimoSeqServidor = 0;
+let wsConectado = false;
+let ws = null;
 
 function actualizarPantalla(estado, detallePersonalizado = null) {
     const config = ESTADOS[estado];
@@ -67,61 +75,55 @@ function formatearTelemetria(payload) {
     return partes.length > 0 ? partes.join('  •  ') : null;
 }
 
+function aplicarSnapshot(data) {
+    if (!data || !data.estado) return;
+    const seqNuevo = typeof data.seq === 'number' ? data.seq : 0;
+    if (data.estado !== estadoActualServidor || seqNuevo > ultimoSeqServidor || seqNuevo === 0) {
+        ultimoSeqServidor = Math.max(ultimoSeqServidor, seqNuevo);
+        const sub = data.estado === 'idle' ? null : formatearTelemetria(data);
+        actualizarPantalla(data.estado, sub);
+    }
+}
+
 function setBadge(textoBadge) {
     if (syncBadge) {
         syncBadge.textContent = textoBadge;
     }
 }
 
-// ── SignalR (tiempo real <50ms) ───────────────────────────────────────
-function iniciarSignalR() {
-    if (!window.signalR) {
-        setBadge('MODO POLLING');
+// ── WebSocket Nativo (/ws/var-state) — instantáneo incluso desde file:// ──
+function conectarWebSocket() {
+    try {
+        ws = new WebSocket(WS_VAR_URL);
+    } catch {
+        setTimeout(conectarWebSocket, 1500);
         return;
     }
 
-    const connection = new window.signalR.HubConnectionBuilder()
-        .withUrl(HUB_URL)
-        .withAutomaticReconnect()
-        .build();
-
-    connection.on('EstadoVARActualizado', (data) => {
-        if (!data || !data.estado) return;
-        const sub = data.estado === 'idle' ? null : formatearTelemetria(data);
-        actualizarPantalla(data.estado, sub);
-    });
-
-    connection.on('NuevoDisparo', (disparo) => {
-        if (!disparo) return;
-        const estado = disparo.fueGol ? 'gol' : 'nogol';
-        actualizarPantalla(estado, formatearTelemetria(disparo));
-    });
-
-    connection.onreconnecting(() => {
-        signalrConectado = false;
-        setBadge('RECONECTANDO...');
-    });
-
-    connection.onreconnected(() => {
-        signalrConectado = true;
-        setBadge('SIGNALR LIVE');
+    ws.onopen = () => {
+        wsConectado = true;
+        setBadge('WS LIVE');
         consultarEstadoBackend();
-    });
+    };
 
-    connection.onclose(() => {
-        signalrConectado = false;
-        setBadge('MODO POLLING');
-    });
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            aplicarSnapshot(data);
+        } catch {
+            // ignorar mensajes no JSON
+        }
+    };
 
-    connection.start()
-        .then(() => {
-            signalrConectado = true;
-            setBadge('SIGNALR LIVE');
-        })
-        .catch(() => {
-            signalrConectado = false;
-            setBadge('MODO POLLING');
-        });
+    ws.onclose = () => {
+        wsConectado = false;
+        setBadge('RECONECTANDO...');
+        setTimeout(conectarWebSocket, 1500);
+    };
+
+    ws.onerror = () => {
+        ws.close();
+    };
 }
 
 // ── Polling REST fallback ─────────────────────────────────────────────
@@ -130,32 +132,23 @@ async function consultarEstadoBackend() {
         const respuesta = await fetch(ENDPOINT_VAR, { cache: 'no-store' });
         if (respuesta.ok) {
             const data = await respuesta.json();
-            if (data.estado && data.estado !== estadoActualServidor) {
-                actualizarPantalla(data.estado);
-            }
-            if (!signalrConectado) {
+            aplicarSnapshot(data);
+            if (!wsConectado) {
                 setBadge('POLLING LIVE');
             }
         }
     } catch {
-        if (!signalrConectado) {
+        if (!wsConectado) {
             setBadge('BACKEND OFFLINE');
         }
     }
 }
 
-// Polling rápido cuando SignalR no está conectado; chequeo suave de respaldo si sí lo está
 setInterval(() => {
-    if (!signalrConectado) {
+    if (!wsConectado) {
         consultarEstadoBackend();
     }
 }, 250);
 
-setInterval(() => {
-    if (signalrConectado) {
-        consultarEstadoBackend();
-    }
-}, 2500);
-
 consultarEstadoBackend();
-iniciarSignalR();
+conectarWebSocket();
